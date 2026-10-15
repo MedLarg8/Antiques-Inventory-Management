@@ -1,4 +1,5 @@
 export type User = {
+    role: 'admin' | 'stock_employee';
     id: number;
     name: string;
     email: string;

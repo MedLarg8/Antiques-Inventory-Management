@@ -1,7 +1,15 @@
-import { Link } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-react';
+import { Link, usePage } from '@inertiajs/react';
+import {
+    Archive,
+    ArrowLeftRight,
+    Building2,
+    ChartNoAxesCombined,
+    ClipboardCheck,
+    FileText,
+    LayoutGrid,
+    Settings2,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
-import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -13,51 +21,57 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
+const items: NavItem[] = [
+    { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
+    { title: 'Inventory', href: '/inventory', icon: Archive },
+    { title: 'Storage Areas', href: '/storage-areas', icon: Building2 },
     {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-];
-
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: FolderGit2,
+        title: 'Stock Movements',
+        href: '/stock-movements',
+        icon: ArrowLeftRight,
     },
     {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
+        title: 'Approval Requests',
+        href: '/approval-requests',
+        icon: ClipboardCheck,
     },
+    { title: 'Documents', href: '/documents', icon: FileText },
+    { title: 'Reports', href: '/reports', icon: ChartNoAxesCombined },
 ];
 
 export function AppSidebar() {
+    const { auth } = usePage().props;
+    const navigation =
+        auth.user.role === 'admin'
+            ? [
+                  ...items,
+                  {
+                      title: 'Administration',
+                      href: '/administration',
+                      icon: Settings2,
+                  },
+              ]
+            : items;
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch>
+                            <Link href="/dashboard" prefetch>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarHeader>
-
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain items={navigation} />
             </SidebarContent>
-
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

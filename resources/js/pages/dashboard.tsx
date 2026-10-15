@@ -1,19 +1,10 @@
 import { Head, usePage } from '@inertiajs/react';
-import {
-    Activity,
-    Archive,
-    Building2,
-    ClipboardCheck,
-    TriangleAlert,
-} from 'lucide-react';
+import { Activity, Archive, ClipboardCheck, TriangleAlert } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import DashboardOrganization from '@/components/dashboard-organization';
+import type { Assignment, OrganizationStats } from '@/types/organization';
 
 const adminWidgets = [
-    {
-        title: 'Total storage areas',
-        detail: 'Organization-wide storage coverage will appear here.',
-        icon: Building2,
-    },
     {
         title: 'Total inventory items',
         detail: 'Inventory totals will appear once records are connected.',
@@ -32,11 +23,6 @@ const adminWidgets = [
 ];
 const employeeWidgets = [
     {
-        title: 'Assigned storage area',
-        detail: 'Storage assignments are not connected yet.',
-        icon: Building2,
-    },
-    {
         title: 'Inventory summary',
         detail: 'Your assigned inventory summary will appear here.',
         icon: Archive,
@@ -53,7 +39,13 @@ const employeeWidgets = [
     },
 ];
 
-export default function Dashboard() {
+export default function Dashboard({
+    organization,
+    assignment,
+}: {
+    organization: OrganizationStats | null;
+    assignment: Assignment | null;
+}) {
     const { auth } = usePage().props;
     const isAdmin = auth.user.role === 'admin';
     const widgets = isAdmin ? adminWidgets : employeeWidgets;
@@ -83,15 +75,21 @@ export default function Dashboard() {
                         {isAdmin ? 'Administrator' : 'Stock Employee'}
                     </span>
                 </div>
+                <DashboardOrganization
+                    organization={organization}
+                    assignment={assignment}
+                    isAdmin={isAdmin}
+                />
                 <div
                     role="note"
                     className="rounded-lg border bg-muted/30 px-4 py-3 text-sm leading-6 text-muted-foreground"
                 >
                     <span className="font-medium text-foreground">
-                        Foundation preview.
+                        Inventory modules are planned.
                     </span>{' '}
-                    Real data will be connected in later batches. These sections
-                    are placeholders; stock operations are not available yet.
+                    Organizational information above comes from the database.
+                    Inventory and approval sections below remain placeholders;
+                    stock operations are not available yet.
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {widgets.map(({ title, detail, icon: Icon }) => (

@@ -8,6 +8,8 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -35,6 +37,19 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+
+    /** @return HasMany<StorageAreaAssignment, $this> */
+    public function storageAreaAssignments(): HasMany
+    {
+        return $this->hasMany(StorageAreaAssignment::class);
+    }
+
+    /** @return HasOneThrough<StorageArea, StorageAreaAssignment, $this> */
+    public function currentStorageArea(): HasOneThrough
+    {
+        return $this->hasOneThrough(StorageArea::class, StorageAreaAssignment::class, 'user_id', 'id', 'id', 'storage_area_id')
+            ->whereNull('storage_area_assignments.ended_at');
+    }
 
     /**
      * Get the attributes that should be cast.

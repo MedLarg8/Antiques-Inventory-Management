@@ -8,6 +8,9 @@ import {
     FileText,
     LayoutGrid,
     Settings2,
+    MapPin,
+    Users,
+    UserCheck,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -26,7 +29,6 @@ import type { NavItem } from '@/types';
 const items: NavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
     { title: 'Inventory', href: '/inventory', icon: Archive },
-    { title: 'Storage Areas', href: '/storage-areas', icon: Building2 },
     {
         title: 'Stock Movements',
         href: '/stock-movements',
@@ -47,13 +49,33 @@ export function AppSidebar() {
         auth.user.role === 'admin'
             ? [
                   ...items,
+                  { title: 'Cities', href: '/cities', icon: MapPin },
+                  {
+                      title: 'Storage Areas',
+                      href: '/storage-areas',
+                      icon: Building2,
+                  },
+                  {
+                      title: 'Employee Assignments',
+                      href: '/assignments',
+                      icon: UserCheck,
+                  },
+                  { title: 'User Management', href: '/users', icon: Users },
                   {
                       title: 'Administration',
                       href: '/administration',
                       icon: Settings2,
                   },
               ]
-            : items;
+            : [
+                  items[0],
+                  {
+                      title: 'My Storage Area',
+                      href: '/my-storage-area',
+                      icon: Building2,
+                  },
+                  ...items.slice(1),
+              ];
 
     return (
         <Sidebar collapsible="icon" variant="inset">

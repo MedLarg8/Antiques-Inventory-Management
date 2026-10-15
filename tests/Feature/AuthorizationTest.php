@@ -46,7 +46,7 @@ class AuthorizationTest extends TestCase
     {
         foreach (Role::cases() as $role) {
             $this->actingAs(User::factory()->create(['role' => $role]));
-            foreach (['inventory', 'storage-areas', 'stock-movements', 'approval-requests', 'documents', 'reports'] as $page) {
+            foreach (['inventory', 'stock-movements', 'approval-requests', 'documents', 'reports'] as $page) {
                 $this->get('/'.$page)->assertOk()
                     ->assertInertia(fn (Assert $page) => $page->component('module-placeholder'));
             }

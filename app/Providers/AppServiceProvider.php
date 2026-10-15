@@ -28,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         Gate::define('access-administration', fn (User $user): bool => $user->role === Role::Admin);
+        Gate::define('view-own-storage', fn (User $user): bool => $user->role === Role::StockEmployee);
     }
 
     /**

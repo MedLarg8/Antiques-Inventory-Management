@@ -30,7 +30,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: pdo_pgsql, pdo_sqlite
+          extensions: pdo_pgsql, pdo_sqlite, gd, exif, bcmath
           tools: composer:v2
           coverage: none
       - uses: actions/setup-node@v4

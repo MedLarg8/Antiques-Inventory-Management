@@ -1,3 +1,4 @@
+import { Link } from '@inertiajs/react';
 import {
     displayDate,
     EmptyState,
@@ -65,10 +66,12 @@ export default function MyStorageArea({
                             </dd>
                         </div>
                     </dl>
-                    <p className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-                        Inventory and stock operations will be available in a
-                        later batch.
-                    </p>
+                    <Link
+                        className="rounded-lg border p-6 underline"
+                        href={'/storage-areas/' + area.id + '/inventory'}
+                    >
+                        View my recorded inventory and thresholds
+                    </Link>
                 </>
             ) : (
                 <EmptyState>

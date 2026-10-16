@@ -1,13 +1,13 @@
-# Inventory Bureau — Batches 1 and 2
+# Inventory Bureau — Batches 1?3
 
-Internal inventory platform for an organization with storage areas across three cities and a Central Administrative Bureau. The bureau approves operations but does not own physical stock. Identity, access control, the application shell, cities, storage areas and employee responsibility are implemented. Inventory and stock-operation workflows are not implemented.
+Internal inventory platform for an organization with storage areas across three cities and a Central Administrative Bureau. The bureau approves operations but does not own physical stock. Identity, access control, the application shell, cities, storage areas and employee responsibility are implemented. The inventory catalog, private photographs and read-only recorded-stock visibility are implemented. Stock-operation workflows remain planned.
 
 ## Stack and prerequisites
 
 Based on the [official Laravel React starter kit](https://github.com/laravel/react-starter-kit), upstream commit `717b8f55aefd82d25d4119eaebdc8e3a72b8d7e5`.
 
 - PHP 8.3+ (PHP 8.4 recommended), Composer 2; Laravel 13, Eloquent, Fortify.
-- Required PHP extensions include ctype, curl, dom, fileinfo, filter, hash, mbstring, openssl, pcre, PDO, pdo_pgsql, session, tokenizer and xml. Enable pdo_sqlite for the isolated in-memory test suite.
+- Required PHP extensions include ctype, curl, dom, fileinfo, filter, hash, mbstring, openssl, pcre, PDO, pdo_pgsql, gd, bcmath, session, tokenizer and xml. Enable pdo_sqlite for the isolated in-memory test suite.
 - Node 22.12+ and npm; React 19, TypeScript, Inertia 3, Vite, Tailwind 4, shadcn/ui and Lucide.
 - PostgreSQL (validated with 18). SQLite is only used for optional isolated tests.
 - PHPUnit, Pint, Larastan, ESLint and Prettier.
@@ -60,14 +60,14 @@ The explicitly invoked development seeder only runs with APP_ENV=local. It creat
 - `admin` and `stock_employee` roles, serialized in `auth.user.role`; role cannot be changed through profile mass assignment.
 - Central `access-administration` Laravel gate; unauthorized requests return 403.
 - Responsive collapsible sidebar, header, profile menu, breadcrumbs and light/dark/system appearance.
-- Database-backed organizational dashboard counts and each employee's current assignment; inventory and approval metrics remain placeholders.
+- Database-backed organizational dashboard counts and each employee's current assignment; catalog and scoped stock metrics are database-backed; approval metrics remain planned.
 - Searchable, paginated city and storage-area management, active/inactive status, city/status filters and storage details.
 - Employee assignment, reassignment and unassignment with retained history and concurrency protection.
 - Read-only My Storage Area view scoped to the signed-in employee.
 - Minimal user management with password-setup email links and current assignment visibility.
 - PostgreSQL configuration, migrations, private local filesystem, development factories/seeder, tests and CI.
 
-Both roles can view the future inventory, movements, approvals, documents and reports placeholders. Only administrators can manage organizational records, assignments and users. A stock employee may view only their currently assigned storage area's details. Future inventory records and approval actions still need resource-scoped policies when implemented.
+Both roles can use the scoped inventory catalog and view movements, approvals, documents and reports placeholders. Only administrators can manage organizational records, assignments and users. A stock employee may view only their currently assigned storage area's details. Inventory reads enforce resource-scoped policies; approval actions remain unimplemented.
 
 ## Organizational model and assignment rules
 
@@ -160,26 +160,20 @@ Wayfinder generates TypeScript route/action helpers during `npm run build` and `
 - `app/Actions/ChangeStorageAreaAssignment.php`: atomic responsibility changes.
 - `app/Policies/StorageAreaPolicy.php`: per-area read authorization.
 - `routes/web.php`: authenticated module routes and Administration authorization.
-- `database/migrations/`: authentication, framework infrastructure, roles and organizational structure. No inventory schema.
+- `database/migrations/`: authentication, framework infrastructure, roles and organizational structure and the Batch 3 catalog/inventory schema.
 - `resources/js/components/`, `layouts/`, `pages/`: shared UI and Inertia pages.
 - `tests/Feature/`: Batch 1 regression coverage, organization management, user setup, scoped reads, retained history, seeders and concurrency. `tests/Support/assignment-worker.php` is the race-test subprocess.
 - `config/filesystems.php`: local disk rooted at storage/app/private, with direct serving disabled.
 
-Add future Inventory, Stock Movements, Approvals, Documents, Notifications and Audit History functionality using normal Laravel controllers, Form Requests, models and policies. Introduce actions/services only when concrete business logic warrants them. Enforce storage-area scope on the backend. Do not infer scope from a browser-supplied role or storage ID.
+Add future Stock Movements, Approvals, Documents, Notifications and Audit History functionality using normal Laravel controllers, Form Requests, models and policies. Introduce actions/services only when concrete business logic warrants them. Enforce storage-area scope on the backend. Do not infer scope from a browser-supplied role or storage ID.
 
 Future stock-changing actions must use database transactions and enforce approval independently from physical execution. Confirm the workflow before adding tables. The separate assignment table can support future multiple responsibilities by revisiting the two partial unique indexes and associated validation, without losing assignment history.
 
 ## Storage
 
-Use Laravel's Storage abstraction and the private local disk. No file binaries belong in PostgreSQL. No upload/download endpoints or PDF generation are implemented. Do not link private storage into public/. Future downloads need authentication and resource authorization.
+Use Laravel's Storage abstraction and the private local disk. No file binaries belong in PostgreSQL. Inventory photographs use authorized upload and streaming endpoints; PDF generation remains unimplemented. Do not link private storage into public/. Every inventory download requires authentication and resource authorization.
 
 The S3 disk already accepts AWS_ENDPOINT, AWS_BUCKET, AWS_DEFAULT_REGION and path-style configuration, so an S3-compatible provider can be added later with its Flysystem adapter. No cloud credentials, integration or adapter is installed in this batch.
-
-## Next batch
-
-For Batch 3, confirm the inventory catalogue fields, quantities versus individually tracked assets, units and storage-level visibility before implementing item records. Resolve the organizational assumptions above. Confirm approval/rejection states, physical execution responsibility and transfers before implementing any stock-changing workflow. Design broader audit history and account deactivation before operational deployment.
-
-Item catalogues, categories, quantities, stock entries/exits, transfers, approval execution, notifications, signatures, PDFs, image uploads and cloud integration remain planned.
 
 ## Validation performed on this workstation
 
@@ -213,3 +207,79 @@ After a machine restart, start this project's isolated PostgreSQL cluster before
 ```
 
 To stop that cluster, use the same `pg_ctl.exe` with `-D "$PWD\.local-tools\pgdata" stop`. It is separate from the pre-existing PostgreSQL service. On other machines, follow the standard installation instructions above.
+
+## Batch 3: catalog and stock visibility
+
+The catalog is now implemented. Stock requests, movements, approvals and opening-balance imports remain future work.
+
+### Domain and schema
+
+- `item_categories`: unique code, name, optional description and parent, active status. Administrators manage categories; employees can read them. Parent relationships are shown on the searchable category list and as ancestry paths in editors. Cycle validation runs inside a transaction; a PostgreSQL advisory lock serializes hierarchy changes.
+- `items`: shared definitions with unique reference, category, tracking mode, unit, description, brand, model, notes and active status. Definitions are not owned by a storage area. Deactivation preserves all related records.
+- `item_assets`: unique asset reference, parent item, serial number, description and condition notes. These are descriptive registrations, not confirmed physical stock.
+- `storage_area_inventory`: one record per item/area, decimal(18,3) quantity and nullable minimum, plus nullable `initialized_at`. Database constraints reject negatives and nonzero uninitialized quantities. Quantity is not mass assignable and there is no public quantity-write endpoint.
+- `item_images`: exactly one item or asset owner, private disk/object references, original MIME/size/name, preview/thumbnail paths, caption, display order, primary marker, uploader and removal timestamp. Foreign keys restrict orphaning/deleting referenced records. Partial unique indexes permit at most one primary image per owner.
+
+Tracking modes are `quantity_consumable`, `quantity_reusable`, and `individual_asset`. Classification is independent of category; antiques are not automatically individual assets. Units are piece, box, liter, kilogram and meter, with no conversions. Item locks serialize balance configuration, asset registration and mode changes. Mode changes cannot invalidate existing balances/assets; units cannot change once balance records exist. Cross-table tracking rules are enforced by these application transactions, so future import/operation code must preserve the same invariants.
+
+### Recorded quantities and thresholds
+
+Administrators configure an area's threshold from the item detail page. If no balance exists, configuration creates a zero-valued **uninitialized** record. This associates the definition with the area for visibility; it does not confirm that stock is physically present. Existing quantities and initialization markers are preserved. Clear the minimum to disable a threshold.
+
+Uninitialized quantities serialize as null and display “Not initialized”; they never produce low-stock alerts. An initialized zero is a recorded zero. Low stock means strictly `quantity < minimum_quantity`, only when initialized and a minimum exists. Comparisons use SQL decimals / PHP BCMath, not JavaScript floats. Dashboard low-stock counts refer to item/area balance records; initialized item-type counts are distinct items. Quantities in different units are not summed.
+
+Individual assets never receive quantity balances or directly editable location fields. Registered asset counts are separate from physical availability, which remains unavailable. Since there is no authorized asset-location association yet, asset records and their photographs are administrator-only. Employees can view only item definitions, images, balances and thresholds associated with their current assigned area; unassigned employees see an empty catalog. Existing inactive records remain readable within that scope.
+
+Future approved operations must atomically append an immutable movement record and update the corresponding locked balance, with authorization, idempotency and audit history. Opening balances must use that controlled workflow and set initialization explicitly. Individual assets will need controlled location records instead of duplicate quantity balances. None of those operations is implemented in Batch 3.
+
+### Pages and permissions
+
+- Inventory catalog: server-paginated search by name/reference, category and mode filters, administrator status filter and primary thumbnails.
+- Category list and create/edit forms; item create/edit/detail pages.
+- Individual asset registration, edit and detail pages, linked from the parent item.
+- Private photo galleries with upload, caption editing, numeric display order (lower first), primary selection and confirmed removal.
+- Storage-area details and My Storage Area link to a paginated read-only inventory section.
+- Dashboards retain organizational data and add real, scoped catalog, initialized-balance and low-stock counts.
+
+All writes use backend administrator authorization. Item, area and image reads use resource policies. Route manipulation does not expand employee scope. No catalog deletion, stock editing, transfers, opening balances, approvals or financial features are exposed.
+
+### Private photographs
+
+Intervention Image 4 with GD decodes JPEG, PNG and WebP. Upload validation checks detected MIME, configurable size and pixel count before decoding. UUID-based paths never use the client filename. Original files are retained; generated WebP previews fit 1600×1600 and thumbnails fit 320×320 without upscaling. Previews are optimized static images with metadata stripped; originals may retain camera metadata. Animation is not processed.
+
+Configure `INVENTORY_IMAGE_DISK=local` (private `storage/app/private`), `INVENTORY_IMAGE_MAX_KB=10240` and `INVENTORY_IMAGE_MAX_PIXELS=24000000`. Enable PHP GD with JPEG/PNG/WebP support and BCMath; EXIF is recommended for orientation. Set PHP `upload_max_filesize=12M`, `post_max_size=16M` or larger and use sufficient memory (512M on this workstation). Restart PHP after changing extensions or limits. Reverse-proxy request limits must also accommodate uploads.
+
+The authenticated image endpoint authorizes the owner for every original, preview and thumbnail request. Responses are private/no-store and nosniff; originals download as attachments with generated filenames. Storage paths are hidden from serialized models; no public storage symlink or public object URL is used.
+
+Uploads compensate file writes if processing/storage/database work fails. Removal first makes metadata inaccessible and promotes a replacement primary image, then deletes files. Failed removal retains soft-deleted paths for retry:
+
+```sh
+php artisan inventory:prune-images
+```
+
+Run this command periodically through your operational scheduler. A hard process crash during upload, or failed compensation while storage is unavailable, may leave private orphan files; failed compensation is logged and needs operator reconciliation. File storage and PostgreSQL cannot share one atomic transaction. Back up both together.
+
+For a future OVHcloud migration, install Laravel's S3 Flysystem adapter, configure the existing S3 disk with private bucket access and OVH endpoint/region/credentials, verify streaming/permissions, then select that disk for new uploads. Existing rows retain their original disk; moving old objects requires a verified copy and metadata migration. No cloud credentials, adapter, bucket or external integration was added.
+
+### Upgrade and verification
+
+Apply additive migrations to the existing configured database, without resetting it:
+
+```sh
+composer install
+php artisan migrate
+npm ci
+npm run build
+```
+
+Use a dedicated PostgreSQL test database; never point the test suite at development or production. Existing PostgreSQL test setup above applies. Run `composer ci:check` with test-database environment overrides, plus `npm run build`. The optional SQLite suite uses in-memory data; PostgreSQL remains authoritative for constraints and concurrent-connection tests.
+
+Batch 3 tests cover category cycles and duplicates, item validation/deactivation, incompatible mode changes, asset metadata boundaries, threshold decimal validation, uninitialized stock, employee scope, private image retrieval, invalid/oversized images, primary selection/reorder, removal, missing files, database/file failure compensation and cleanup retries. Batch 1–2 regressions remain included.
+
+Browser visual verification is pending because no browser is connected to the available tooling. Responsive layout, themes and interactive gallery behavior still need a visual review. Automated HTTP tests and a production build do not substitute for that review.
+
+### Recommended Batch 4 planning
+
+Confirm approval versus physical-execution responsibilities, opening-balance authorization, immutable movement history, idempotency, concurrency/locking, and controlled individual-asset locations before implementing stock operations. Keep account deactivation and wider audit history on the deployment roadmap. Batch 3 stops at the catalog and read-only recorded-stock boundary.
+
+Batch 3 final workstation verification (2026-10-15): PostgreSQL **83 tests / 828 assertions passed**; SQLite **79 tests / 808 assertions passed**, with four PostgreSQL race tests skipped. Pint, Larastan level 7, ESLint, Prettier, TypeScript, Composer validation and the Vite production build passed. The additive development migration completed. Live HTTP checks passed for both roles: login/CSRF/session, catalog and categories, administrator forms, scoped dashboard metrics, Batch 2 routes and logout. Logs remain in ignored `.local-tools/batch3-*.txt` files. Browser visual verification remains pending.

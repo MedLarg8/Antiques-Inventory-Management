@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Models\ItemImage;
 use App\Models\User;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
@@ -55,8 +56,8 @@ class ProfileController extends Controller
 
         DB::transaction(function () use ($user): void {
             $lockedUser = User::query()->lockForUpdate()->findOrFail($user->id);
-            if ($lockedUser->storageAreaAssignments()->exists()) {
-                throw ValidationException::withMessages(['password' => 'This account has assignment history and cannot be deleted. Contact an administrator.']);
+            if ($lockedUser->storageAreaAssignments()->exists() || ItemImage::withTrashed()->where('uploaded_by', $lockedUser->id)->exists()) {
+                throw ValidationException::withMessages(['password' => 'This account has assignment history or inventory photographs and cannot be deleted. Contact an administrator.']);
             }
             $lockedUser->delete();
         });

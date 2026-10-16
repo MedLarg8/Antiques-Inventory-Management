@@ -1,54 +1,20 @@
 import { Head, usePage } from '@inertiajs/react';
-import { Activity, Archive, ClipboardCheck, TriangleAlert } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import DashboardOrganization from '@/components/dashboard-organization';
 import type { Assignment, OrganizationStats } from '@/types/organization';
 
-const adminWidgets = [
-    {
-        title: 'Total inventory items',
-        detail: 'Inventory totals will appear once records are connected.',
-        icon: Archive,
-    },
-    {
-        title: 'Pending approvals',
-        detail: 'Requests awaiting bureau review will appear here.',
-        icon: ClipboardCheck,
-    },
-    {
-        title: 'Low-stock alerts',
-        detail: 'Alerts will be available when stock rules are defined.',
-        icon: TriangleAlert,
-    },
-];
-const employeeWidgets = [
-    {
-        title: 'Inventory summary',
-        detail: 'Your assigned inventory summary will appear here.',
-        icon: Archive,
-    },
-    {
-        title: 'Pending requests',
-        detail: 'Your submitted request statuses will appear here.',
-        icon: ClipboardCheck,
-    },
-    {
-        title: 'Low-stock alerts',
-        detail: 'Alerts will be available when stock rules are defined.',
-        icon: TriangleAlert,
-    },
-];
-
 export default function Dashboard({
     organization,
     assignment,
+    inventory,
 }: {
     organization: OrganizationStats | null;
     assignment: Assignment | null;
+    inventory: Record<string, number | null>;
 }) {
     const { auth } = usePage().props;
     const isAdmin = auth.user.role === 'admin';
-    const widgets = isAdmin ? adminWidgets : employeeWidgets;
 
     return (
         <>
@@ -80,41 +46,27 @@ export default function Dashboard({
                     assignment={assignment}
                     isAdmin={isAdmin}
                 />
-                <div
-                    role="note"
-                    className="rounded-lg border bg-muted/30 px-4 py-3 text-sm leading-6 text-muted-foreground"
-                >
-                    <span className="font-medium text-foreground">
-                        Inventory modules are planned.
-                    </span>{' '}
-                    Organizational information above comes from the database.
-                    Inventory and approval sections below remain placeholders;
-                    stock operations are not available yet.
-                </div>
+                <p className="text-sm text-muted-foreground">
+                    Physical availability is shown only for initialized
+                    balances. Low stock means recorded quantity is strictly
+                    below its minimum. Stock operations and approvals are
+                    planned.
+                </p>
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    {widgets.map(({ title, detail, icon: Icon }) => (
-                        <Card key={title} className="shadow-none">
-                            <CardHeader>
-                                <div className="mb-4 flex items-center justify-between">
-                                    <Icon
-                                        className="size-5 text-muted-foreground"
-                                        aria-hidden="true"
-                                    />
-                                    <span className="text-xs text-muted-foreground">
-                                        Planned
-                                    </span>
-                                </div>
-                                <CardTitle className="text-sm font-medium">
-                                    {title}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-sm leading-6 text-muted-foreground">
-                                    {detail}
-                                </p>
-                            </CardContent>
-                        </Card>
-                    ))}
+                    {Object.entries(inventory)
+                        .filter(([, value]) => value !== null)
+                        .map(([title, value]) => (
+                            <Card key={title}>
+                                <CardHeader>
+                                    <CardTitle className="text-sm">
+                                        {title}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="text-3xl font-semibold">
+                                    {value}
+                                </CardContent>
+                            </Card>
+                        ))}
                 </div>
                 <Card className="shadow-none">
                     <CardHeader>

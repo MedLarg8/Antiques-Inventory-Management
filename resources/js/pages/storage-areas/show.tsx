@@ -126,12 +126,19 @@ export default function StorageAreaShow({
                     <Pagination page={history} />
                 </section>
             )}
-            <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-                <strong className="text-foreground">
-                    Inventory — planned.
-                </strong>{' '}
-                Items, quantities and stock operations are not implemented yet.
-            </div>
+            <section className="rounded-lg border p-6">
+                <h2 className="mb-3 font-semibold">Inventory</h2>
+                <Link
+                    className="underline"
+                    href={'/storage-areas/' + area.id + '/inventory'}
+                >
+                    View recorded inventory and thresholds
+                </Link>
+                <p className="mt-2 text-sm text-muted-foreground">
+                    Physical stock changes require authorized operations in a
+                    future batch.
+                </p>
+            </section>
         </OrganizationPage>
     );
 }

@@ -24,7 +24,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('storage-areas', StorageAreaController::class)->except(['show', 'destroy']);
         Route::get('assignments', [AssignmentController::class, 'index'])->name('assignments.index');
         Route::put('storage-areas/{storage_area}/assignment', [AssignmentController::class, 'update'])->name('assignments.update');
-        Route::resource('users', EmployeeController::class)->only(['index', 'create', 'store']);
+        Route::resource('users', EmployeeController::class)->except(['destroy']);
+        Route::put('users/{user}/role', [EmployeeController::class, 'role'])->name('users.role');
+        Route::put('users/{user}/status', [EmployeeController::class, 'status'])->name('users.status');
+        Route::post('users/{user}/setup-link', [EmployeeController::class, 'setupLink'])->middleware('throttle:6,1')->name('users.setup-link');
         Route::post('users/{user}/invite', [EmployeeController::class, 'invite'])->middleware('throttle:6,1')->name('users.invite');
     });
     Route::get('storage-areas/{storage_area}', [StorageAreaController::class, 'show'])->name('storage-areas.show');

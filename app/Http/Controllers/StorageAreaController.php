@@ -59,7 +59,7 @@ class StorageAreaController extends Controller
         return Inertia::render('storage-areas/show', [
             'area' => $storage_area->load(['city:id,name,is_active', 'currentAssignment.user:id,name']),
             'history' => $admin ? $storage_area->assignments()->whereNotNull('ended_at')->with('user:id,name')->orderByDesc('assigned_at')->orderByDesc('id')->paginate(10) : null,
-            'employees' => $admin ? User::where('role', Role::StockEmployee)->whereDoesntHave('storageAreaAssignments', fn ($q) => $q->whereNull('ended_at'))->orderBy('name')->get(['id', 'name', 'email']) : [],
+            'employees' => $admin ? User::where('role', Role::StockEmployee)->where('is_active', true)->whereDoesntHave('storageAreaAssignments', fn ($q) => $q->whereNull('ended_at'))->orderBy('name')->get(['id', 'name', 'email']) : [],
             'canManage' => $admin,
         ]);
     }

@@ -45,37 +45,36 @@ const items: NavItem[] = [
 
 export function AppSidebar() {
     const { auth } = usePage().props;
-    const navigation =
-        auth.user.role === 'admin'
-            ? [
-                  ...items,
-                  { title: 'Cities', href: '/cities', icon: MapPin },
-                  {
-                      title: 'Storage Areas',
-                      href: '/storage-areas',
-                      icon: Building2,
-                  },
-                  {
-                      title: 'Employee Assignments',
-                      href: '/assignments',
-                      icon: UserCheck,
-                  },
-                  { title: 'User Management', href: '/users', icon: Users },
-                  {
-                      title: 'Administration',
-                      href: '/administration',
-                      icon: Settings2,
-                  },
-              ]
-            : [
-                  items[0],
-                  {
-                      title: 'My Storage Area',
-                      href: '/my-storage-area',
-                      icon: Building2,
-                  },
-                  ...items.slice(1),
-              ];
+    const navigation = auth.canAdministrate
+        ? [
+              ...items,
+              { title: 'Cities', href: '/cities', icon: MapPin },
+              {
+                  title: 'Storage Areas',
+                  href: '/storage-areas',
+                  icon: Building2,
+              },
+              {
+                  title: 'Employee Assignments',
+                  href: '/assignments',
+                  icon: UserCheck,
+              },
+              { title: 'User Management', href: '/users', icon: Users },
+              {
+                  title: 'Administration',
+                  href: '/administration',
+                  icon: Settings2,
+              },
+          ]
+        : [
+              items[0],
+              {
+                  title: 'My Storage Area',
+                  href: '/my-storage-area',
+                  icon: Building2,
+              },
+              ...items.slice(1),
+          ];
 
     return (
         <Sidebar collapsible="icon" variant="inset">

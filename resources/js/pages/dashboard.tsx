@@ -8,13 +8,15 @@ export default function Dashboard({
     organization,
     assignment,
     inventory,
+    employees,
 }: {
     organization: OrganizationStats | null;
     assignment: Assignment | null;
     inventory: Record<string, number | null>;
+    employees: Record<string, number> | null;
 }) {
     const { auth } = usePage().props;
-    const isAdmin = auth.user.role === 'admin';
+    const isAdmin = auth.canAdministrate;
 
     return (
         <>
@@ -46,6 +48,25 @@ export default function Dashboard({
                     assignment={assignment}
                     isAdmin={isAdmin}
                 />
+                {employees && (
+                    <section
+                        aria-label="Employee administration"
+                        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+                    >
+                        {Object.entries(employees).map(([title, value]) => (
+                            <Card key={title}>
+                                <CardHeader>
+                                    <CardTitle className="text-sm">
+                                        {title}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="text-3xl font-semibold">
+                                    {value}
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </section>
+                )}
                 <p className="text-sm text-muted-foreground">
                     Physical availability is shown only for initialized
                     balances. Low stock means recorded quantity is strictly

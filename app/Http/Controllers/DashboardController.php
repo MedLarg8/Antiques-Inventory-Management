@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Role;
 use App\Models\City;
 use App\Models\Item;
 use App\Models\ItemAsset;
 use App\Models\ItemCategory;
 use App\Models\StorageArea;
 use App\Models\StorageAreaInventory;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -28,6 +30,14 @@ class DashboardController extends Controller
                 'Low-stock balances' => StorageAreaInventory::visibleTo($request->user())->lowStock()->count(),
                 'Uninitialized balance records' => StorageAreaInventory::visibleTo($request->user())->whereNull('initialized_at')->count(),
             ],
+            'employees' => $admin ? [
+                'Total accounts' => User::count(),
+                'Active accounts' => User::where('is_active', true)->count(),
+                'Inactive accounts' => User::where('is_active', false)->count(),
+                'Active administrators' => User::where('is_active', true)->where('role', Role::Admin)->count(),
+                'Depot employees' => User::where('role', Role::StockEmployee)->count(),
+                'Active depot employees without assignments' => User::where('role', Role::StockEmployee)->where('is_active', true)->doesntHave('currentStorageArea')->count(),
+            ] : null,
             'organization' => $admin ? [
                 'cities' => City::count(),
                 'storageAreas' => StorageArea::count(),

@@ -20,7 +20,7 @@ class EmployeeManagementTest extends TestCase
     {
         Notification::fake();
         $this->actingAs(User::factory()->create(['role' => Role::Admin]))
-            ->post('/users', ['name' => 'New Employee', 'email' => 'EMPLOYEE@example.test', 'role' => 'admin', 'password' => 'injected-password', 'email_verified_at' => now()])
+            ->post('/users', ['name' => 'New Employee', 'email' => 'EMPLOYEE@example.test', 'role' => 'stock_employee', 'password' => 'injected-password', 'email_verified_at' => now()])
             ->assertSessionHasNoErrors()->assertRedirect('/users');
         $employee = User::where('email', 'employee@example.test')->sole();
         $this->assertSame(Role::StockEmployee, $employee->role);

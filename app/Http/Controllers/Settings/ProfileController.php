@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Actions\ManageEmployee;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Models\EmployeeAudit;
 use App\Models\ItemImage;
 use App\Models\User;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -55,10 +57,15 @@ class ProfileController extends Controller
         $user = $request->user();
 
         DB::transaction(function () use ($user): void {
+            ManageEmployee::lock();
             $lockedUser = User::query()->lockForUpdate()->findOrFail($user->id);
+            if (EmployeeAudit::where('actor_id', $user->id)->orWhere('employee_id', $user->id)->exists()) {
+                throw ValidationException::withMessages(['password' => 'This account has administrative history and cannot be deleted.']);
+            }
             if ($lockedUser->storageAreaAssignments()->exists() || ItemImage::withTrashed()->where('uploaded_by', $lockedUser->id)->exists()) {
                 throw ValidationException::withMessages(['password' => 'This account has assignment history or inventory photographs and cannot be deleted. Contact an administrator.']);
             }
+            ManageEmployee::ensureAdministratorRemains($lockedUser);
             $lockedUser->delete();
         });
 

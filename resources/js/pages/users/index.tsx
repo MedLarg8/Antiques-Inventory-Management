@@ -1,132 +1,198 @@
-import { Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { Link, useForm } from '@inertiajs/react';
 import {
-    ConfirmChange,
+    OrganizationPage,
     DataTable,
     EmptyState,
-    OrganizationPage,
     Pagination,
-    SearchFilters,
+    StatusBadge,
+    displayDate,
+    selectClass,
 } from '@/components/organization';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { User } from '@/types';
-import type { Paginated, StorageArea } from '@/types/organization';
-
-type Account = Pick<
-    User,
-    'id' | 'name' | 'email' | 'role' | 'email_verified_at'
-> & { current_storage_area: StorageArea | null };
+import { Input } from '@/components/ui/input';
+import InputError from '@/components/input-error';
+import type { Employee } from '@/types/employees';
+import type { Paginated } from '@/types/organization';
 export default function Users({
     users,
     filters,
+    roles,
+    cities,
+    areas,
 }: {
-    users: Paginated<Account>;
-    filters: { search?: string };
+    users: Paginated<Employee>;
+    filters: Record<string, string>;
+    roles: Record<string, string>;
+    cities: { id: number; name: string }[];
+    areas: { id: number; name: string }[];
 }) {
-    const [selected, setSelected] = useState<Account | null>(null);
-    const [processing, setProcessing] = useState(false);
-    function send() {
-        if (!selected) return;
-        router.post(
-            `/users/${selected.id}/invite`,
-            {},
-            {
-                preserveScroll: true,
-                onStart: () => setProcessing(true),
-                onFinish: () => {
-                    setProcessing(false);
-                    setSelected(null);
-                },
-            },
-        );
-    }
+    const form = useForm({
+        search: filters.search ?? '',
+        role: filters.role ?? '',
+        status: filters.status ?? '',
+        assignment: filters.assignment ?? '',
+        city_id: filters.city_id ?? '',
+        storage_area_id: filters.storage_area_id ?? '',
+        sort: filters.sort ?? 'name',
+        direction: filters.direction ?? 'asc',
+    });
+    const choices: Record<string, [string, string][]> = {
+        role: [['', 'All roles'], ...Object.entries(roles)],
+        status: [
+            ['', 'All account statuses'],
+            ['active', 'Active'],
+            ['inactive', 'Inactive'],
+        ],
+        assignment: [
+            ['', 'All responsibility statuses'],
+            ['assigned', 'Assigned'],
+            ['unassigned', 'Unassigned'],
+        ],
+        city_id: [
+            ['', 'All cities'],
+            ...cities.map((c) => [String(c.id), c.name] as [string, string]),
+        ],
+        storage_area_id: [
+            ['', 'All depots'],
+            ...areas.map((a) => [String(a.id), a.name] as [string, string]),
+        ],
+        sort: [
+            ['name', 'Name'],
+            ['email', 'Email'],
+            ['created_at', 'Date created'],
+            ['last_login_at', 'Last login'],
+        ],
+        direction: [
+            ['asc', 'Ascending'],
+            ['desc', 'Descending'],
+        ],
+    };
+    const labels: Record<string, string> = {
+        role: 'Role',
+        status: 'Account status',
+        assignment: 'Depot assignment',
+        city_id: 'City',
+        storage_area_id: 'Depot',
+        sort: 'Sort by',
+        direction: 'Sort direction',
+    };
     return (
         <OrganizationPage
-            title="User Management"
-            description="Create stock employee accounts and review their role, email verification and current responsibility."
+            title="Employee directory"
+            description="Manage accounts, permissions and depot responsibility."
             actions={
                 <Button asChild>
-                    <Link href="/users/create">Create stock employee</Link>
+                    <Link href="/users/create">Create employee</Link>
                 </Button>
             }
         >
-            <SearchFilters url="/users" filters={filters} />
+            <form
+                className="grid gap-4 rounded border p-4 sm:grid-cols-2 xl:grid-cols-4"
+                onSubmit={(e) => {
+                    e.preventDefault();
+                    form.get('/users', { preserveState: true });
+                }}
+            >
+                <label className="space-y-2">
+                    <span>Search name or email</span>
+                    <Input
+                        value={form.data.search}
+                        onChange={(e) => form.setData('search', e.target.value)}
+                        maxLength={100}
+                    />
+                </label>
+                {(Object.keys(choices) as (keyof typeof form.data)[]).map(
+                    (k) => (
+                        <label key={k} className="space-y-2">
+                            <span>{labels[k]}</span>
+                            <select
+                                className={selectClass}
+                                value={form.data[k]}
+                                onChange={(e) =>
+                                    form.setData(k, e.target.value)
+                                }
+                            >
+                                {choices[k].map(([v, l]) => (
+                                    <option key={v} value={v}>
+                                        {l}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                    ),
+                )}
+                <div className="flex gap-3">
+                    <Button disabled={form.processing}>Apply filters</Button>
+                    <Link href="/users" className="self-center underline">
+                        Clear
+                    </Link>
+                </div>
+                {Object.values(form.errors).map((e) => (
+                    <InputError key={e} message={e} />
+                ))}
+            </form>
             {users.data.length ? (
                 <DataTable
                     headers={[
                         'Name / email',
                         'Role',
-                        'Account status',
-                        'Storage area',
+                        'Account access',
+                        'Depot / city',
+                        'Created',
+                        'Last login',
                         'Actions',
                     ]}
                 >
-                    {users.data.map((user) => (
-                        <tr key={user.id}>
-                            <td className="font-medium">
-                                {user.name}
-                                <div className="mt-1 text-xs font-normal text-muted-foreground">
-                                    {user.email}
-                                </div>
-                            </td>
+                    {users.data.map((u) => (
+                        <tr key={u.id}>
                             <td>
-                                {user.role === 'admin'
-                                    ? 'Administrator'
-                                    : 'Stock Employee'}
+                                <Link
+                                    className="font-medium underline"
+                                    href={'/users/' + u.id}
+                                >
+                                    {u.name}
+                                </Link>
+                                <p className="text-xs text-muted-foreground">
+                                    {u.email}
+                                </p>
                             </td>
+                            <td>{roles[u.role]}</td>
                             <td>
-                                <Badge variant="outline">
-                                    {user.email_verified_at
+                                <StatusBadge active={u.is_active} />
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                    {u.email_verified_at
                                         ? 'Email verified'
-                                        : 'Awaiting email verification'}
-                                </Badge>
+                                        : 'Awaiting verification'}
+                                </p>
                             </td>
                             <td>
-                                {user.current_storage_area ? (
-                                    <Link
-                                        className="underline underline-offset-4"
-                                        href={`/storage-areas/${user.current_storage_area.id}`}
-                                    >
-                                        {user.current_storage_area.name}
-                                    </Link>
-                                ) : (
-                                    'Unassigned'
-                                )}
+                                {u.current_storage_area
+                                    ? u.current_storage_area.city.name +
+                                      ' / ' +
+                                      u.current_storage_area.name
+                                    : 'Unassigned'}
+                            </td>
+                            <td>{displayDate(u.created_at)}</td>
+                            <td>
+                                {u.last_login_at
+                                    ? displayDate(u.last_login_at)
+                                    : 'Not recorded'}
                             </td>
                             <td>
-                                {user.role === 'stock_employee' && (
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => setSelected(user)}
-                                    >
-                                        Send setup link
-                                        <span className="sr-only">
-                                            {' '}
-                                            to {user.name}
-                                        </span>
-                                    </Button>
-                                )}
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link href={'/users/' + u.id}>Manage</Link>
+                                </Button>
                             </td>
                         </tr>
                     ))}
                 </DataTable>
             ) : (
-                <EmptyState>No users match this search.</EmptyState>
+                <EmptyState>No employees match these filters.</EmptyState>
             )}
             <Pagination page={users} />
-            <ConfirmChange
-                open={selected !== null}
-                onOpenChange={(open) => {
-                    if (!open) setSelected(null);
-                }}
-                title="Send password-setup link?"
-                description={`Send a secure password-reset link to ${selected?.email}? Existing passwords remain unchanged until the employee chooses a new one.`}
-                onConfirm={send}
-                processing={processing}
-            />
         </OrganizationPage>
     );
 }
-Users.layout = { breadcrumbs: [{ title: 'User Management', href: '/users' }] };
+Users.layout = {
+    breadcrumbs: [{ title: 'Employee directory', href: '/users' }],
+};

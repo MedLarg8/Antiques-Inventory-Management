@@ -2,9 +2,12 @@
 
 namespace App\Actions\Fortify;
 
+use App\Actions\ManageEmployee;
 use App\Concerns\PasswordValidationRules;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\ResetsUserPasswords;
 
 class ResetUserPassword implements ResetsUserPasswords
@@ -22,8 +25,14 @@ class ResetUserPassword implements ResetsUserPasswords
             'password' => $this->passwordRules(),
         ])->validate();
 
-        $user->forceFill([
-            'password' => $input['password'],
-        ])->save();
+        DB::transaction(function () use ($user, $input): void {
+            $locked = User::lockForUpdate()->findOrFail($user->id);
+            if (! $locked->is_active) {
+                throw ValidationException::withMessages(['email' => 'This account cannot reset its password.']);
+            }
+            $user->refresh();
+            $user->forceFill(['password' => $input['password']]);
+            ManageEmployee::revoke($user);
+        });
     }
 }

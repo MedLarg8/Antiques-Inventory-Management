@@ -13,7 +13,7 @@ Route::get('/', fn () => to_route('dashboard'))->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
-    foreach (['stock-movements', 'approval-requests', 'documents', 'reports'] as $module) {
+    foreach (['documents', 'reports'] as $module) {
         Route::get($module, ModuleController::class)->name($module);
     }
     Route::get('administration', ModuleController::class)
@@ -36,3 +36,4 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 require __DIR__.'/settings.php';
 require __DIR__.'/inventory.php';
+require __DIR__.'/stock.php';

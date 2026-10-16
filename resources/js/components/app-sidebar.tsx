@@ -29,6 +29,7 @@ import type { NavItem } from '@/types';
 const items: NavItem[] = [
     { title: 'Dashboard', href: '/dashboard', icon: LayoutGrid },
     { title: 'Inventory', href: '/inventory', icon: Archive },
+    { title: 'Stock Requests', href: '/stock-requests', icon: ClipboardCheck },
     {
         title: 'Stock Movements',
         href: '/stock-movements',
@@ -73,7 +74,9 @@ export function AppSidebar() {
                   href: '/my-storage-area',
                   icon: Building2,
               },
-              ...items.slice(1),
+              ...items
+                  .slice(1)
+                  .filter((item) => item.href !== '/approval-requests'),
           ];
 
     return (

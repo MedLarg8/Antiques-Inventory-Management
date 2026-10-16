@@ -10,6 +10,7 @@ use App\Models\ItemCategory;
 use App\Models\StorageArea;
 use App\Models\StorageAreaInventory;
 use App\Models\User;
+use App\Services\StockOverview;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -21,6 +22,7 @@ class DashboardController extends Controller
         $admin = $request->user()->can('access-administration');
 
         return Inertia::render('dashboard', [
+            'stock' => app(StockOverview::class)->forUser($request->user()),
             'inventory' => [
                 'Visible item definitions' => Item::visibleTo($request->user())->count(),
                 'Active item definitions' => Item::visibleTo($request->user())->where('is_active', true)->count(),

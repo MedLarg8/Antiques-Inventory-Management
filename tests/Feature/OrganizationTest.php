@@ -68,7 +68,7 @@ class OrganizationTest extends TestCase
     public function test_search_filters_and_management_pages_return_real_records(): void
     {
         $city = City::factory()->create(['name' => 'Northern City', 'code' => 'NORTH']);
-        $other = City::factory()->create();
+        $other = City::factory()->create(['name' => 'Southern City', 'code' => 'SOUTH']);
         $area = StorageArea::factory()->create(['city_id' => $city->id, 'name' => 'Special Store', 'is_active' => false]);
         StorageArea::factory()->create(['city_id' => $other->id]);
         $this->actingAs($this->admin())->get('/cities?search=north')->assertInertia(fn (Assert $page) => $page->component('cities/index')->has('cities.data', 1)->where('cities.data.0.id', $city->id));

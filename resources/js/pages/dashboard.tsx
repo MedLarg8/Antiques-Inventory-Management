@@ -1,5 +1,6 @@
 import { Head, usePage } from '@inertiajs/react';
-import { Activity } from 'lucide-react';
+import DashboardStock from '@/components/dashboard-stock';
+import type { StockSummary } from '@/types/stock';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import DashboardOrganization from '@/components/dashboard-organization';
 import type { Assignment, OrganizationStats } from '@/types/organization';
@@ -9,11 +10,13 @@ export default function Dashboard({
     assignment,
     inventory,
     employees,
+    stock,
 }: {
     organization: OrganizationStats | null;
     assignment: Assignment | null;
     inventory: Record<string, number | null>;
     employees: Record<string, number> | null;
+    stock: StockSummary;
 }) {
     const { auth } = usePage().props;
     const isAdmin = auth.canAdministrate;
@@ -70,8 +73,8 @@ export default function Dashboard({
                 <p className="text-sm text-muted-foreground">
                     Physical availability is shown only for initialized
                     balances. Low stock means recorded quantity is strictly
-                    below its minimum. Stock operations and approvals are
-                    planned.
+                    below its minimum. Stock changes only when an approved
+                    operation is executed.
                 </p>
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {Object.entries(inventory)
@@ -89,28 +92,7 @@ export default function Dashboard({
                             </Card>
                         ))}
                 </div>
-                <Card className="shadow-none">
-                    <CardHeader>
-                        <CardTitle className="text-base">
-                            {isAdmin
-                                ? 'Recent stock movements'
-                                : 'Recent activity'}
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex min-h-48 flex-col items-center justify-center gap-3 text-center">
-                        <Activity
-                            className="size-7 text-muted-foreground"
-                            aria-hidden="true"
-                        />
-                        <p className="text-sm font-medium">
-                            Activity integration is planned
-                        </p>
-                        <p className="max-w-md text-sm leading-6 text-muted-foreground">
-                            Authorized operations and their history will appear
-                            here when the workflow is implemented.
-                        </p>
-                    </CardContent>
-                </Card>
+                <DashboardStock stock={stock} />
             </div>
         </>
     );

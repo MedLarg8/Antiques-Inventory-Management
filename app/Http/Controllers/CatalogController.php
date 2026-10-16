@@ -100,12 +100,12 @@ class CatalogController extends Controller
             } else {
                 $model = $record ? Item::lockForUpdate()->findOrFail($record) : new Item;
                 if ($record && $model->tracking_mode->value !== $data['tracking_mode']) {
-                    if (($data['tracking_mode'] === TrackingMode::Individual->value && $model->balances()->exists()) || ($data['tracking_mode'] !== TrackingMode::Individual->value && $model->assets()->exists())) {
-                        throw ValidationException::withMessages(['tracking_mode' => 'Existing balance or asset records prevent this tracking-mode change.']);
+                    if (($data['tracking_mode'] === TrackingMode::Individual->value && ($model->balances()->exists() || $model->stockRequestItems()->exists())) || ($data['tracking_mode'] !== TrackingMode::Individual->value && $model->assets()->exists())) {
+                        throw ValidationException::withMessages(['tracking_mode' => 'Existing balance, asset or stock-request records prevent this tracking-mode change.']);
                     }
                 }
-                if ($record && $model->unit_of_measure !== $data['unit_of_measure'] && $model->balances()->exists()) {
-                    throw ValidationException::withMessages(['unit_of_measure' => 'Units cannot change once balance records exist.']);
+                if ($record && $model->unit_of_measure !== $data['unit_of_measure'] && ($model->balances()->exists() || $model->stockRequestItems()->exists())) {
+                    throw ValidationException::withMessages(['unit_of_measure' => 'Units cannot change once balance or stock-request records exist.']);
                 }
             }
             $model->fill($data)->save();

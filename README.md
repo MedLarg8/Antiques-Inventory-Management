@@ -1,6 +1,6 @@
-# Inventory Bureau - Batches 1-4
+# Inventory Bureau - Batches 1-5
 
-Internal inventory platform for an organization with storage areas across three cities and a Central Administrative Bureau. The bureau approves operations but does not own physical stock. Identity, access control, the application shell, cities, storage areas and employee responsibility are implemented. The inventory catalog, private photographs and read-only recorded-stock visibility are implemented. Stock-operation workflows remain planned.
+Internal inventory platform for an organization with storage areas across three cities and a Central Administrative Bureau. The bureau approves operations but does not own physical stock. Identity, access control, the application shell, cities, storage areas and employee responsibility are implemented. The inventory catalog, private photographs and read-only recorded-stock visibility are implemented. Approved quantity-based entry and exit execution, request history and movement ledgers are implemented; controlled opening balances remain a prerequisite for uninitialized inventory.
 
 ## Stack and prerequisites
 
@@ -60,14 +60,14 @@ The explicitly invoked development seeder only runs with APP_ENV=local. It creat
 - `admin` and `stock_employee` roles, serialized in `auth.user.role`; role cannot be changed through profile mass assignment.
 - Central `access-administration` Laravel gate; unauthorized requests return 403.
 - Responsive collapsible sidebar, header, profile menu, breadcrumbs and light/dark/system appearance.
-- Database-backed organizational dashboard counts and each employee's current assignment; catalog and scoped stock metrics are database-backed; approval metrics remain planned.
+- Database-backed organizational dashboard counts and each employee's current assignment; catalog and scoped stock metrics are database-backed; request/approval/execution metrics are database-backed.
 - Searchable, paginated city and storage-area management, active/inactive status, city/status filters and storage details.
 - Employee assignment, reassignment and unassignment with retained history and concurrency protection.
 - Read-only My Storage Area view scoped to the signed-in employee.
 - Employee directory, profile/role/status management, immediate access revocation, private onboarding, depot responsibility and administrative history.
 - PostgreSQL configuration, migrations, private local filesystem, development factories/seeder, tests and CI.
 
-Both roles can use the scoped inventory catalog and view movements, approvals, documents and reports placeholders. Only administrators can manage organizational records, assignments and users. A stock employee may view only their currently assigned storage area's details. Inventory reads enforce resource-scoped policies; approval actions remain unimplemented.
+Both roles can use the scoped inventory catalog, stock requests and movement history. Administrators can review approvals; documents and reports remain placeholders. Only administrators can manage organizational records, assignments and users. A stock employee may view only their currently assigned storage area's details. Inventory reads and stock workflows enforce resource-scoped policies and current responsibility checks.
 
 ## Organizational model and assignment rules
 
@@ -165,9 +165,9 @@ Wayfinder generates TypeScript route/action helpers during `npm run build` and `
 - `tests/Feature/`: Batch 1 regression coverage, organization management, user setup, scoped reads, retained history, seeders and concurrency. `tests/Support/assignment-worker.php` is the race-test subprocess.
 - `config/filesystems.php`: local disk rooted at storage/app/private, with direct serving disabled.
 
-Add future Stock Movements, Approvals, Documents, Notifications and Audit History functionality using normal Laravel controllers, Form Requests, models and policies. Introduce actions/services only when concrete business logic warrants them. Enforce storage-area scope on the backend. Do not infer scope from a browser-supplied role or storage ID.
+Extend future Documents, Notifications and broader Audit History functionality using normal Laravel controllers, Form Requests, models and policies. Introduce actions/services only when concrete business logic warrants them. Enforce storage-area scope on the backend. Do not infer scope from a browser-supplied role or storage ID.
 
-Future stock-changing actions must use database transactions and enforce approval independently from physical execution. Confirm the workflow before adding tables. The separate assignment table can support future multiple responsibilities by revisiting the two partial unique indexes and associated validation, without losing assignment history.
+The stock workflow uses database transactions and enforces approval independently from physical execution. Future stock-changing actions must preserve that boundary. The separate assignment table can support future multiple responsibilities by revisiting the two partial unique indexes and associated validation, without losing assignment history.
 
 ## Storage
 
@@ -210,7 +210,7 @@ To stop that cluster, use the same `pg_ctl.exe` with `-D "$PWD\.local-tools\pgda
 
 ## Batch 3: catalog and stock visibility
 
-The catalog is now implemented. Stock requests, movements, approvals and opening-balance imports remain future work.
+The catalog is implemented. Batch 5 adds stock requests, approvals, execution and movement history; opening-balance imports remain future work.
 
 ### Domain and schema
 
@@ -278,9 +278,9 @@ Batch 3 tests cover category cycles and duplicates, item validation/deactivation
 
 Browser visual verification is pending because no browser is connected to the available tooling. Responsive layout, themes and interactive gallery behavior still need a visual review. Automated HTTP tests and a production build do not substitute for that review.
 
-### Stock workflow planning (future Batch 5)
+### Stock workflow extensions after Batch 5
 
-Confirm approval versus physical-execution responsibilities, opening-balance authorization, immutable movement history, idempotency, concurrency/locking, and controlled individual-asset locations before implementing stock operations. Account deactivation and employee administrative history are implemented in Batch 4; wider inventory audit history remains future work. Batch 3 stops at the catalog and read-only recorded-stock boundary.
+Batch 5 implements separate approval and execution, movement history, idempotency and concurrency protection. Controlled opening balances and individual-asset locations remain future dependencies. Account deactivation and employee administrative history are implemented in Batch 4; wider inventory audit history remains future work. Batch 3 stops at the catalog and read-only recorded-stock boundary.
 
 Batch 3 final workstation verification (2026-10-15): PostgreSQL **83 tests / 828 assertions passed**; SQLite **79 tests / 808 assertions passed**, with four PostgreSQL race tests skipped. Pint, Larastan level 7, ESLint, Prettier, TypeScript, Composer validation and the Vite production build passed. The additive development migration completed. Live HTTP checks passed for both roles: login/CSRF/session, catalog and categories, administrator forms, scoped dashboard metrics, Batch 2 routes and logout. Logs remain in ignored `.local-tools/batch3-*.txt` files. Browser visual verification remains pending.
 
@@ -352,6 +352,118 @@ Use the dedicated `inventory_test` PostgreSQL database and the test-database env
 
 On 2026-10-16 the full PostgreSQL suite passed **99 tests / 1061 assertions**, including three new concurrent-connection cases: simultaneous administrator demotions, cross-deactivation, and promotion versus depot assignment. The existing four assignment-race cases also passed. SQLite passed **92 tests / 1023 assertions**, skipping those seven PostgreSQL-only cases. Functional coverage includes onboarding expiry/single use, role/status/profile authorization, inactive login, old-session rejection, reactivation, pending two-factor revocation, targeted database-session deletion, assignment history, audit secrecy and all Batch 1-3 regressions.
 
-Browser visual verification remains pending because no browser is connected. Actual SMTP delivery and production internal-network hosting have not been configured or tested. Batch 5 stock requests, approvals, execution, transfers and quantity updates remain unimplemented.
+Browser visual verification remains pending because no browser is connected. Actual SMTP delivery and production internal-network hosting have not been configured or tested. Batch 5 implements quantity-based stock requests, approvals, execution and movement history. Transfers and controlled opening balances remain unimplemented.
 
 Pint, Larastan level 7, ESLint, Prettier, TypeScript, Composer manifest validation and the Vite production build passed. The additive development migration completed. Live HTTP checks passed for both roles: login, CSRF, database sessions, employee directory/create/detail/edit authorization, employee dashboard metrics, prior-batch routes, and logout. Local verification logs are in the ignored `.local-tools/batch4-*.txt` files.
+
+## Batch 5: stock requests, approval and execution
+
+This module implements quantity-based stock entries and exits using the existing catalog, employees, active-account checks, assignments and recorded balances. It works entirely within Laravel and PostgreSQL without SMTP, cloud storage or external APIs.
+
+Approval authorizes a future physical operation. It is separate from execution because the bureau reviews the request while the responsible depot employee performs and confirms the physical work. Saving, submitting, approving, rejecting or cancelling never changes recorded stock.
+
+### Lifecycle and responsibilities
+
+| Current state | Permitted next action | Actor | Stock effect |
+| --- | --- | --- | --- |
+| Draft | Edit, submit, or cancel | Original requester; editing/submission also require current active depot responsibility | None |
+| Pending approval | Approve or reject with a reason | Active administrator other than the requester | None |
+| Approved | Explicitly confirm physical execution | Active stock employee currently responsible for that active depot | Atomic entry/exit update on success |
+| Rejected | Terminal; create a corrected new draft | No direct resubmission | None |
+| Completed | Terminal | No repeated execution | Already recorded |
+| Cancelled | Terminal | Draft cancellation only | None |
+
+There are dedicated action endpoints and a centralized `StockWorkflow` action. No arbitrary status-update or quantity-edit endpoint exists. Administrators cannot execute requests by approving them or through the employee execution endpoint. An administrator promoted from an employee role cannot review their own earlier request.
+
+A request captures its depot when created from the server-validated current assignment. Browser-supplied depot/requester/status fields are rejected. Reassignment never changes historical depot association. Draft cancellation remains available to the original active stock employee even after reassignment, so obsolete drafts can be closed without stock changes.
+
+An approved request can be executed by a replacement responsible employee if the original requester leaves, is reassigned or is deactivated. The actual executor is recorded separately from the requester and reviewer. Every action revalidates current account state and responsibility inside the transaction.
+
+### Creating and reviewing requests
+
+Use **Stock Requests** to create an entry or exit, search active quantity-based items, enter positive decimal quantities, provide a reason and optional source/destination reference, and save a draft or save and submit. A draft may temporarily contain no lines; submission requires at least one. Duplicate items are rejected. There is a technical limit of 100 lines per request; item search returns at most 20 matches and can be refined.
+
+Item search exposes only the metadata necessary to select globally defined quantity-based items and recorded availability for the employee's own depot. It does not broaden access to private images or other depot balances.
+
+Only active consumables and reusable equipment can be added or submitted. Quantities are decimal strings with up to 15 whole digits and three fractional digits, compared/calculated with SQL numeric values and PHP BCMath. No JavaScript stock arithmetic or unit conversion is used. Fractional quantities are supported for the configured units without introducing additional unit-specific rules.
+
+Outgoing submission checks initialized, sufficient recorded stock, but does not reserve or deduct it. All outgoing availability is checked again at execution. An entry may be submitted/reviewed while initialization is pending, but cannot execute against missing or uninitialized balances.
+
+The administrator-only **Approval Requests** page defaults to pending requests and supports status, depot, city, requesting-employee name/email, operation, date and reference filters. Date filters refer to request creation dates; movement date filters refer to execution dates. Lists use server-side pagination. Administrators review the exact submitted content, approve it as written or reject with a mandatory reason. Stale or duplicate decisions return an error without changing stock.
+
+Submitted operation details cannot be edited. Item reference, name and unit snapshots preserve historical meaning. Snapshot metadata is refreshed at submission and then retained. Unit changes and conversion to individual-asset mode are blocked once request lines reference an item; the existing balance/asset safeguards remain. Item deactivation prevents new additions/submissions but does not silently revoke an already approved operation. Execution still verifies quantity tracking and matching units.
+
+### Initialization boundary
+
+A missing balance is **not confirmed zero stock**. A newly configured Batch 3 balance remains uninitialized even though its database quantity is zero.
+
+- Exits cannot submit from missing or uninitialized balances.
+- Neither entries nor exits can execute against missing or uninitialized balances.
+- Execution does not create balance rows or set initialization timestamps.
+- Item details and request details explain the opening-balance prerequisite and show actionable execution blockers.
+
+There is deliberately no live opening-balance import, administrator quantity shortcut or production initialization seeder. Confirmed starting balances exist only in isolated test fixtures. A controlled, authorized opening-balance workflow is the next operational dependency. Until that exists, newly configured live inventory remains blocked from execution.
+
+### Transaction and concurrency guarantees
+
+Each existing-request mutation locks the request first, reloads/locks the actor, locks the historical depot row, and authorizes the action against current state. Execution then locks catalog items and existing inventory balances in ascending item ID order. Depot locks serialize against assignment and depot-status changes; user locks serialize against role/status revocation. The actor's revocation counter is checked again to reject a stale in-flight authenticated action.
+
+Within one execution transaction, the workflow:
+
+1. Requires approved status and current eligible depot responsibility.
+2. Revalidates every line, matching unit and initialized balance.
+3. Checks all outgoing availability and supported entry limits.
+4. Applies decimal-safe quantities.
+5. Inserts one movement for each request line, including delta, before and after values.
+6. Records the actual executor and timestamp, marks the request completed, and appends its execution event.
+7. Commits everything together.
+
+Any validation, database or ledger-write failure rolls back the entire request. Two competing exits cannot overspend stock. A losing insufficient-stock execution remains approved for a later valid attempt. Transactions retry deadlocks/serialization conflicts up to three times; recognized exhausted database conflicts return an actionable retry error.
+
+Request row locking and completed-state checks prevent replayed execution. A unique movement constraint per request line provides a second database-level safeguard. Repeating a confirmation returns a state error, never another quantity update. Failed attempts do not append misleading successful lifecycle events.
+
+Approval and availability displays are not stock reservations. Staff must resolve displayed blockers before performing physical work. Availability can change between review and confirmation; recording then rechecks the authoritative balance. The application does not invent a physical reconciliation or adjustment workflow when such a conflict occurs.
+
+### Schema and history
+
+The additive `2026_10_16_200000_create_stock_operations.php` migration creates:
+
+- `stock_requests`: unique ULID-based `SR-` reference, entry/exit type, captured depot, requester, status, reason/reference, submission/review/execution timestamps, reviewer/executor, rejection reason and indexes.
+- `stock_request_items`: unique request/item pair, positive decimal(18,3) quantity and selective item reference/name/unit snapshots.
+- `stock_movements`: unique request-line reference, depot/item, signed decimal delta, before/after values and actual executor/time. A composite foreign key ties the movement to its exact originating line, request and item.
+- `stock_request_events`: actor, lifecycle event type, previous/new status, optional decision comment and timestamp.
+
+Foreign keys restrict removal of referenced business records and users. PostgreSQL checks enforce positive lines, valid request lifecycle field combinations, independent review, movement signs, nonnegative before/after balances and exact delta arithmetic. Existing nonnegative inventory and initialization constraints remain in force.
+
+Movement and lifecycle models have no ordinary edit/delete routes. Submitted requests have no deletion endpoint. Draft editing may replace draft lines, while submitted/reviewed lines remain immutable through the application. Account deletion now checks stock-operation history as well as existing protected history.
+
+Request events are distinct from account-administration audit events. They record draft creation, meaningful draft edits, submission, approval/rejection, execution and cancellation, with no authentication secrets. The request detail page shows a paginated timeline; movement history records successful stock changes only. These are application-controlled histories, not a generic event-sourcing framework or a promise of protection against privileged direct database modification.
+
+### Visibility and dashboards
+
+Administrators can view all requests and movements. Employees can view their own requests, their own recorded executions, and approved requests awaiting execution in their currently assigned depot. Employees do not gain access to another employee's unrelated drafts or pending requests. Reassigned requesters retain historical request details but do not see the former depot's current balances. Movement lists are scoped to current depot responsibility; request detail retains the movements of a request the employee may view.
+
+The sidebar adds Stock Requests, connects Stock Movements, and restricts Approval Requests navigation to administrators. Detail pages provide explicit submission, review, rejection, draft cancellation and execution confirmation controls, loading/error states and current availability warnings. The confirmation identifies the exact depot, operation and item quantities.
+
+Dashboards preserve organization, employee and inventory metrics, add real status counts with filtered-list links, and display recent completions and executed movements. Employee counters distinguish their own approvals from all approved operations awaiting execution at their current depot.
+
+### Upgrade, testing and remaining scope
+
+Apply the additive migration to the existing configured database, then build:
+
+```sh
+php artisan migrate
+npm run build
+```
+
+Use the dedicated PostgreSQL test database with the environment overrides documented above. Run `composer ci:check` and `npm run build`. Do not reset development data or point the test suite at a valuable database. SQLite is an optional smoke/regression environment; its numeric affinity cannot represent the full decimal(18,3) boundary exactly, so PostgreSQL is authoritative for precision, lifecycle checks and concurrency.
+
+New tests cover draft/line validation, immutable submission/review, rejection/cancellation rules, role/depot visibility, confirmation requirements, exact entry/exit arithmetic, initialization blocking, alternate execution after reassignment, insufficient-stock rollback, a simulated mid-ledger failure, later-line overflow, historical snapshots, read-only routes and database integrity.
+
+Separate PostgreSQL worker processes test duplicate execution, competing outgoing requests, approval versus rejection, and execution versus reassignment. Earlier authentication, employee administration, assignment concurrency, catalog and image regression tests remain included. An older city-search fixture now uses a deterministic nonmatching city, avoiding accidental matches from Faker-generated names.
+
+No transfers, loans, returns, adjustments, individual-asset movements, opening-balance bypasses, financial workflows, PDFs, signatures, external services or production deployment were introduced. Individual asset identification/location remains a separate future requirement. Approved/pending cancellation remains unavailable; rejected requests need a new draft.
+
+Browser visual verification is pending because no browser is connected to the available tooling. The next batch should first specify controlled opening balances and physical conflict reconciliation, then separately confirm any asset-location or transfer rules. Batch 5 stops at the implemented entry/exit request, approval and execution boundary.
+
+Batch 5 workstation verification (2026-10-16): Laravel 13.36.0, Inertia Laravel 3.5.1 / React adapter 3.9.1, React 19.3.1, TypeScript 5.9.3, Vite 8.3.4 and Tailwind 4.3.3 were inspected from lockfiles. No dependencies were added. The full PostgreSQL suite passed **127 tests / 1356 assertions**, including eleven separate-process concurrency cases across Batches 2, 4 and 5. SQLite passed **116 tests / 1279 assertions**, with those eleven PostgreSQL-only cases skipped. Pint, Larastan level 7, ESLint, Prettier, TypeScript, Composer manifest validation and the production build passed. The additive development migration completed. Live HTTP checks passed for both roles, including CSRF/session login, stock requests, movement listings, administrator-only approvals, employee administration regression routes, stock dashboard properties and logout. Logs are in ignored `.local-tools/batch5-*.txt` files. Browser visual verification remains pending.

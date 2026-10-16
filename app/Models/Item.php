@@ -37,6 +37,12 @@ class Item extends Model
         return $this->hasMany(ItemAsset::class);
     }
 
+    /** @return HasMany<StockRequestItem, $this> */
+    public function stockRequestItems(): HasMany
+    {
+        return $this->hasMany(StockRequestItem::class);
+    }
+
     /** @return HasMany<StorageAreaInventory, $this> */
     public function balances(): HasMany
     {

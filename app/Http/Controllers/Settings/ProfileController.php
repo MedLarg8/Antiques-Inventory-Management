@@ -8,6 +8,8 @@ use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Models\EmployeeAudit;
 use App\Models\ItemImage;
+use App\Models\StockRequest;
+use App\Models\StockRequestEvent;
 use App\Models\User;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
@@ -61,6 +63,9 @@ class ProfileController extends Controller
             $lockedUser = User::query()->lockForUpdate()->findOrFail($user->id);
             if (EmployeeAudit::where('actor_id', $user->id)->orWhere('employee_id', $user->id)->exists()) {
                 throw ValidationException::withMessages(['password' => 'This account has administrative history and cannot be deleted.']);
+            }
+            if (StockRequestEvent::where('actor_id', $user->id)->exists() || StockRequest::where('requested_by', $user->id)->orWhere('reviewed_by', $user->id)->orWhere('executed_by', $user->id)->exists()) {
+                throw ValidationException::withMessages(['password' => 'This account has stock-operation history and cannot be deleted.']);
             }
             if ($lockedUser->storageAreaAssignments()->exists() || ItemImage::withTrashed()->where('uploaded_by', $lockedUser->id)->exists()) {
                 throw ValidationException::withMessages(['password' => 'This account has assignment history or inventory photographs and cannot be deleted. Contact an administrator.']);

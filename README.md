@@ -467,3 +467,56 @@ No transfers, loans, returns, adjustments, individual-asset movements, opening-b
 Browser visual verification is pending because no browser is connected to the available tooling. The next batch should first specify controlled opening balances and physical conflict reconciliation, then separately confirm any asset-location or transfer rules. Batch 5 stops at the implemented entry/exit request, approval and execution boundary.
 
 Batch 5 workstation verification (2026-10-16): Laravel 13.36.0, Inertia Laravel 3.5.1 / React adapter 3.9.1, React 19.3.1, TypeScript 5.9.3, Vite 8.3.4 and Tailwind 4.3.3 were inspected from lockfiles. No dependencies were added. The full PostgreSQL suite passed **127 tests / 1356 assertions**, including eleven separate-process concurrency cases across Batches 2, 4 and 5. SQLite passed **116 tests / 1279 assertions**, with those eleven PostgreSQL-only cases skipped. Pint, Larastan level 7, ESLint, Prettier, TypeScript, Composer manifest validation and the production build passed. The additive development migration completed. Live HTTP checks passed for both roles, including CSRF/session login, stock requests, movement listings, administrator-only approvals, employee administration regression routes, stock dashboard properties and logout. Logs are in ignored `.local-tools/batch5-*.txt` files. Browser visual verification remains pending.
+
+## Database recovery and outage handling
+
+### Workstation recovery (2026-10-17)
+
+The original database was recovered without creating a database, running migrations, resetting tables or changing business data. This checkout's active `.env` specifies PostgreSQL at `127.0.0.1:55432`, database `inventory`, user `inventory_dev`. The reported `5432` / `inventory_app` settings did not match the file on this workstation. No process environment override, connection URL override or cached Laravel configuration explained a different target. PHPUnit defaults to isolated SQLite; PostgreSQL regression tests explicitly use the existing disposable `inventory_test` database.
+
+The Windows PostgreSQL service was accepting connections on port **5432**, while this project's separate original cluster at `.local-tools/pgdata` was stopped. Docker's daemon was unavailable and no project Compose deployment was found. The service on 5432 and the project cluster on 55432 are distinct instances; viewing one in pgAdmin does not show the other's databases.
+
+Starting the existing project cluster with the `pg_ctl` command documented above restored connectivity. `php artisan config:clear` completed, Laravel connected to the original `inventory` database, and `php artisan migrate:status` showed all migrations through Batch 5 already applied. No `.env` credentials or port changes were necessary. The project cluster remains a manual local process, so start it again after a workstation restart. Do not initialize a new cluster over its data directory.
+
+In pgAdmin, register a connection to host `127.0.0.1`, port `55432`, maintenance database `inventory`, username `inventory_dev`, using the password already stored in the local ignored `.env`. Refresh its database list. Existing connections to port 5432 can remain separate. Machine-local tooling, cluster files and credentials are not committed.
+
+### Runtime behavior
+
+Laravel 13's supported [exception reporting and rendering callbacks](https://github.com/laravel/docs/blob/13.x/errors.md) in `bootstrap/app.php` classify PDO exceptions and their causes by SQLSTATE. Connection class `08`, PostgreSQL shutdown/recovery states `57P01`–`57P03`, connection exhaustion `53300`, authentication configuration failures `28000` / `28P01`, and missing target database `3D000` produce HTTP **503**. Schema errors, constraints, deadlocks and ordinary application defects retain their existing behavior.
+
+HTML and Inertia visits receive a standalone static Blade page with inline styles and no authenticated properties, session reads, database queries, Vite assets or external resources. JSON clients receive a generic unavailable response. Both include `Retry-After: 60` and `Cache-Control: no-store`; neither includes exception text, SQL, credentials, stack traces or server paths, even with local debug enabled. Inertia asset-version changes preserve 503 instead of converting it into a reload response. Browser visual verification is pending; HTTP verification does not establish visual layout quality.
+
+Authentication, active-account checks, authorization and stock transaction rules are unchanged. Failed operations are not queued, synchronized offline or represented as successful. Existing balances are never substituted with zeros or mock data. The page deliberately does not promise that an operation made no changes: if a connection is lost during commit, or session saving fails after an operation committed, the outcome may need checking. Once connectivity returns, inspect the stock request and movement history before retrying a submission. The recovery link makes a GET request; it does not replay a write.
+
+### Health and readiness
+
+Both routes are outside the session/authentication web middleware and send no-store responses:
+
+| Endpoint | Healthy response | During a database outage |
+| --- | --- | --- |
+| `GET /up` | 200, `{"status":"ok"}` | Still 200 if Laravel can respond; no database or cache connection |
+| `GET /ready/database` | 200, `{"status":"ready"}`, after a real `select 1` | 503, generic JSON with status `unavailable` |
+
+These endpoints disclose no credentials, connection addresses, database names or SQL. Readiness checks connectivity only; it does not prove every table or business prerequisite exists. A broken application or schema is not silently relabeled as a connectivity outage. Neither endpoint enables access to protected inventory operations.
+
+### Safe local logging
+
+Recognized connectivity failures bypass default exception logging, including its authentication context lookup. A dedicated daily local `database_outages` channel writes `storage/logs/database-outages-YYYY-MM-DD.log`, retaining 14 files. Entries include the timestamp, SQLSTATE and configured driver, with no exception message, query, bindings, request body, URL, user details or password. An atomic file-cache entry limits logging to one entry per SQLSTATE per 60 seconds on each application host, even when the default cache uses PostgreSQL. Multiple hosts have independent limits. No external monitoring was added.
+
+Keep `storage/logs` and `storage/framework/cache/data` writable. A logging/cache filesystem failure must not prevent the safe 503 response; it can prevent an outage diagnostic from being recorded. Production deployments should continue to use `APP_DEBUG=false` for unrelated exceptions.
+
+### Verification
+
+Controlled tests cover database-session read/save failures, protected requests blocked with 503, safe output with debug enabled, independent health/readiness, Inertia asset-version mismatch, SQLSTATE classification and throttled redacted logging. A stock execution test injects a connection failure after the first ledger write and verifies HTTP 503, unchanged balances, approved request status, no movements, no execution event and no queued job. Existing authentication, authorization, decimal precision and PostgreSQL concurrency regressions remain included.
+
+Live HTTP fault checks used a separate PHP process with only its connection port changed to an unused port. The actual development cluster stayed running. The isolated server returned 200 for `/up` and safe 503 responses for database readiness, login GET/POST and stock-request POST. The healthy server returned 200 for both health endpoints. Both real local roles passed the existing CSRF/login, database-session, dashboard, catalog, organization, employee, request/movement, approval authorization and logout HTTP smoke checks. The isolated fault server was stopped afterward.
+
+Executed results (2026-10-17):
+
+- Full PostgreSQL regression run: **134 tests / 1410 assertions passed**, including the eleven existing separate-process concurrency tests and interrupted stock execution. Three additional outage tests were added while that suite was running.
+- Final focused PostgreSQL run, after all changes: **10 tests / 67 assertions passed**, covering all nine outage tests plus interrupted stock execution. Command: `php artisan test --compact --filter='DatabaseAvailabilityTest|connection_failure_during_execution'` with `DB_CONNECTION=pgsql`, `DB_DATABASE=inventory_test`.
+- Pint, Larastan level 7, Composer manifest validation and `git diff --check` passed.
+- `npm run check`, `npm run types:check` and `npm run build` passed with process-only `DB_HOST=127.0.0.1`, `DB_PORT=1` overrides. A connection probe confirmed that target was unavailable first. The production build transformed 2342 modules and completed successfully; Vite emitted an informational plugin timing warning. The running development database was never stopped for these checks.
+- SQLite was not rerun for this recovery task. Browser visual verification remains pending.
+
+No dependencies, migrations or inventory business rules were changed. Git contains only the outage handling, health routes, tests and documentation changes; local recovery tools, credentials and validation logs remain ignored.

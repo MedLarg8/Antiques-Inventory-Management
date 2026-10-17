@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Symfony\Component\HttpFoundation\Response;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -24,6 +25,12 @@ class HandleInertiaRequests extends Middleware
     public function version(Request $request): ?string
     {
         return parent::version($request);
+    }
+
+    public function onVersionChange(Request $request, Response $response): Response
+    {
+        // Keep an outage visible instead of converting it into an asset reload.
+        return $response->getStatusCode() === 503 ? $response : parent::onVersionChange($request, $response);
     }
 
     /**

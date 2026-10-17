@@ -52,6 +52,14 @@ return [
 
     'channels' => [
 
+        'database_outages' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/database-outages.log'),
+            'level' => 'warning',
+            'days' => 14,
+            'replace_placeholders' => true,
+        ],
+
         'stack' => [
             'driver' => 'stack',
             'channels' => explode(',', (string) env('LOG_STACK', 'single')),

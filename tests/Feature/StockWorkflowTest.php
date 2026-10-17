@@ -305,6 +305,37 @@ class StockWorkflowTest extends TestCase
         $this->assertSame(0, $r->events()->where('event_type', 'executed')->count());
     }
 
+    public function test_connection_failure_during_execution_returns_503_and_rolls_back_every_write(): void
+    {
+        $a = StorageAreaAssignment::factory()->create();
+        $admin = $this->admin();
+        $one = Item::factory()->create();
+        $two = Item::factory()->create();
+        $b1 = $this->balance($a, $one);
+        $b2 = $this->balance($a, $two);
+        $r = $this->draft($a->user, [['item_id' => $one->id, 'quantity' => '1'], ['item_id' => $two->id, 'quantity' => '1']]);
+        $this->approve($r, $a->user, $admin);
+        $written = 0;
+        StockMovement::creating(function () use (&$written) {
+            if (++$written === 2) {
+                throw DatabaseAvailabilityTest::failure();
+            }
+        });
+        try {
+            $this->actingAs($a->user)->post('/stock-requests/'.$r->id.'/execute', ['confirmed' => true], ['X-Inertia' => 'true'])
+                ->assertStatus(503)->assertSee('No action has been queued.')->assertHeaderMissing('Location')->assertDontSee('secret-password');
+        } finally {
+            Event::forget('eloquent.creating: '.StockMovement::class);
+        }
+        $this->assertSame(2, $written);
+        $this->assertSame('10.000', $b1->fresh()->quantity);
+        $this->assertSame('10.000', $b2->fresh()->quantity);
+        $this->assertSame(StockRequestStatus::Approved, $r->fresh()->status);
+        $this->assertDatabaseCount('stock_movements', 0);
+        $this->assertSame(0, $r->events()->where('event_type', 'executed')->count());
+        $this->assertDatabaseCount('jobs', 0);
+    }
+
     public function test_overflow_in_later_entry_line_cannot_partially_execute(): void
     {
         $a = StorageAreaAssignment::factory()->create();
